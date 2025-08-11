@@ -3,261 +3,285 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover" />
-  <title>Mini Voxel Sandbox – Mobile</title>
-  <meta name="theme-color" content="#0b0f14" />
-  <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <title>Two-Player Hex – Mobile Touch (R2 Board)</title>
   <style>
-    :root { --bg:#0b0f14; --panel:rgba(13,18,26,.7); --border:#1f2a37; --text:#e6f1ff; }
-    html, body { margin:0; height:100%; background:var(--bg); color:var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; overscroll-behavior: none; }
-    canvas { display:block; touch-action:none; }
-    #ui { position: fixed; top: 10px; left: 10px; z-index: 10; }
-    .card { background: var(--panel); border:1px solid var(--border); padding:10px 12px; border-radius:12px; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
-    .title { font-weight:800; font-size:16px; margin-bottom:6px; }
-    .help { font-size:12px; opacity:.85; line-height:1.5; }
-    #hotbar { position: fixed; left: 50%; transform: translateX(-50%); bottom: 18px; display: flex; gap: 8px; z-index: 12; }
-    .slot { width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--border); background: var(--panel); display:grid; place-items:center; box-shadow: 0 8px 20px rgba(0,0,0,.35); font-weight:700; }
-    .slot.active { outline: 2px solid #7dd3fc; }
-    #actions { position: fixed; right: 14px; bottom: 18px; display:flex; flex-direction:column; gap:10px; z-index:12; }
-    .btn { border:none; padding:12px 14px; border-radius: 12px; font-weight:700; background:#1d2836; color:var(--text); }
-    #moveZone { position: fixed; left: 0; bottom: 0; width: 50vw; height: 55vh; z-index: 11; touch-action:none; }
-    #lookZone { position: fixed; right: 0; bottom: 0; width: 50vw; height: 100vh; z-index: 11; touch-action:none; }
-    #joystick { position:absolute; width: 120px; height: 120px; border-radius: 60px; border:1px solid var(--border); background: rgba(255,255,255,.04); left: 16px; bottom: 16px; z-index: 12; }
-    #stick { position:absolute; width: 56px; height:56px; border-radius: 28px; background: rgba(125,211,252,.3); border:1px solid rgba(125,211,252,.6); left: 16px; bottom: 16px; transform: translate(32px, 32px); }
+    :root{ --bg:#0b0f14; --panel:#121a24; --edge:#1f2a37; --text:#e6f1ff; --accent:#7dd3fc; }
+    html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;overscroll-behavior:none}
+    .app{display:flex;flex-direction:column;min-height:100svh;padding-bottom:env(safe-area-inset-bottom)}
+    .hud{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:10px 12px;flex-wrap:wrap}
+    .card{background:var(--panel);border:1px solid var(--edge);padding:8px 10px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    .left{display:flex;gap:8px;align-items:center}
+    .badge{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px}
+    .dot{width:16px;height:16px;border-radius:50%}
+    .btn{border:none;background:#1d2836;color:var(--text);padding:12px 14px;border-radius:12px;font-weight:700}
+    .stats{font-size:14px}
+    canvas{display:block;width:100%;height:auto;aspect-ratio:9/14;border-top:1px solid var(--edge);border-bottom:1px solid var(--edge);background:linear-gradient(180deg,#0f1622,#0a0f17)}
+    @media (min-width:720px){ canvas{aspect-ratio:16/9} }
+    .legend{display:flex;gap:10px;align-items:center;padding:8px 12px}
+    .sw{width:16px;height:16px;border-radius:4px;border:1px solid rgba(0,0,0,.25)}
   </style>
 </head>
 <body>
-  <div id="ui">
-    <div class="card">
-      <div class="title">Voxel – Mobile</div>
-      <div class="help">Left area: drag joystick to move • Right area: drag to look • Place/Remove buttons on the right • Up/Down for height</div>
+  <div class="app">
+    <div class="hud">
+      <div class="left">
+        <div id="turn" class="card badge"><div id="turnDot" class="dot" style="background:#0a0a0a"></div><span>Player 1 (Black)</span></div>
+        <div class="card stats">Edges — Black: <b id="bEdges">0</b> • White: <b id="wEdges">0</b> • Grey: <b id="gEdges">0</b></div>
+      </div>
+      <div class="right">
+        <button id="reset" class="btn">Reset</button>
+      </div>
+    </div>
+    <canvas id="board"></canvas>
+    <div class="legend">
+      <div class="sw" style="background:#fecaca;border-color:#f87171"></div><span>Red</span>
+      <div class="sw" style="background:#bbf7d0;border-color:#34d399"></div><span>Green</span>
+      <div class="sw" style="background:#bfdbfe;border-color:#60a5fa"></div><span>Blue</span>
+      <div class="sw" style="background:#fef9c3;border-color:#facc15"></div><span>Yellow</span>
     </div>
   </div>
-  <div id="hotbar"></div>
-  <div id="actions">
-    <button id="placeBtn" class="btn">Place</button>
-    <button id="removeBtn" class="btn">Remove</button>
-    <button id="upBtn" class="btn">Up</button>
-    <button id="downBtn" class="btn">Down</button>
-  </div>
-  <div id="moveZone"></div>
-  <div id="lookZone"></div>
-  <div id="joystick"><div id="stick"></div></div>
 
-  <script type="module">
-    // Register service worker
-    if ('serviceWorker' in navigator) {
-      addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(console.error));
+  <script>
+    const canvas = document.getElementById('board');
+    const ctx = canvas.getContext('2d');
+
+    // DPR-aware sizing
+    function fitCanvas(){
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const rectW = canvas.clientWidth;
+      const rectH = Math.max(420, canvas.clientHeight || (window.innerHeight * 0.7));
+      canvas.width = Math.floor(rectW * dpr);
+      canvas.height = Math.floor(rectH * dpr);
+      ctx.setTransform(dpr,0,0,dpr,0,0); // draw in CSS pixels
     }
-  </script>
 
-  <script type="module">
-    import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+    // Players & colors
+    const P = { NONE:0, BLACK:1, WHITE:2 };
+    const PLAYER_COLOR = { [P.BLACK]:'#0a0a0a', [P.WHITE]:'#f3f4f6' };
+    const EDGE_GREY = '#9ca3af';
 
-    const renderer = new THREE.WebGLRenderer({ antialias:true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
-    document.body.appendChild(renderer.domElement);
-
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0b0f14);
-
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-    camera.position.set(8, 6, 8);
-
-    const hemi = new THREE.HemisphereLight(0xffffff, 0x334466, 0.65);
-    scene.add(hemi);
-    const dir = new THREE.DirectionalLight(0xffffff, 0.8);
-    dir.position.set(6, 10, 3);
-    scene.add(dir);
-
-    const dirVec = new THREE.Vector3();
-    const rightVec = new THREE.Vector3(1,0,0);
-    const blocks = new Map();
-
-    const materials = [
-      new THREE.MeshStandardMaterial({ color: 0x6bbf59 }),
-      new THREE.MeshStandardMaterial({ color: 0x8b5a2b }),
-      new THREE.MeshStandardMaterial({ color: 0x888888 }),
-      new THREE.MeshStandardMaterial({ color: 0xc8a26a }),
-      new THREE.MeshStandardMaterial({ color: 0xb64646 }),
+    // Pastel fills + darker outlines
+    const COLOR_SET = [
+      { fill:'#fecaca', stroke:'#f87171' }, // red
+      { fill:'#bbf7d0', stroke:'#34d399' }, // green
+      { fill:'#bfdbfe', stroke:'#60a5fa' }, // blue
+      { fill:'#fef9c3', stroke:'#facc15' }, // yellow
     ];
-    let activeMat = 0;
 
-    const hotbar = document.getElementById('hotbar');
-    const slots = [];
-    for (let i=0;i<5;i++){
-      const el = document.createElement('div');
-      el.className = 'slot'+(i===0?' active':'');
-      el.textContent = (i+1);
-      el.addEventListener('click', ()=> selectSlot(i));
-      hotbar.appendChild(el); slots.push(el);
+    // Axial ring radius
+    const BOARD_R = 2; // center + two rings
+
+    // Data containers
+    let R = 40; // hex radius (computed per layout)
+    let center = {x:0,y:0};
+    let hexes = [];
+    let vertices = [];
+    let edges = [];
+    let hexVerts = [];
+
+    // Helpers
+    function hexPoints(cx, cy){
+      const pts = [];
+      for(let i=0;i<6;i++){
+        const a = Math.PI/6 + i * Math.PI/3; // 30° + 60°i (pointy)
+        pts.push({x: cx + R*Math.cos(a), y: cy + R*Math.sin(a)});
+      }
+      return pts;
     }
-    function selectSlot(i){ activeMat = i; slots.forEach((s,idx)=> s.classList.toggle('active', idx===i)); }
-
-    const cubeGeo = new THREE.BoxGeometry(1,1,1);
-    function key(x,y,z){ return `${x}|${y}|${z}`; }
-    function addBlock(x,y,z, matIndex=activeMat){
-      const k = key(x,y,z); if (blocks.has(k)) return;
-      const mesh = new THREE.Mesh(cubeGeo, materials[matIndex]);
-      mesh.position.set(x+0.5, y+0.5, z+0.5);
-      scene.add(mesh); blocks.set(k, mesh);
+    function axialToPixel(q,r){
+      const x = center.x + R * (Math.sqrt(3) * q + Math.sqrt(3)/2 * r);
+      const y = center.y + R * (3/2 * r);
+      return {x,y};
     }
-    function removeBlock(x,y,z){
-      const k = key(x,y,z); const m = blocks.get(k); if(!m) return; scene.remove(m); m.geometry.dispose(); blocks.delete(k);
-    }
+    function hexDistance(q,r){ const s = -q-r; return Math.max(Math.abs(q), Math.abs(r), Math.abs(s)); }
 
-    // Ground
-    const groundGeo = new THREE.PlaneGeometry(200, 200);
-    const groundMat = new THREE.MeshStandardMaterial({ color: 0x2a3b2f });
-    const ground = new THREE.Mesh(groundGeo, groundMat);
-    ground.rotation.x = -Math.PI/2; ground.position.y = 0; scene.add(ground);
+    // Vertex/edge registries with merge tolerance
+    const VERT_EPS = 0.5; // px merge tolerance
+    const vKey = (x,y)=> `${Math.round(x/ VERT_EPS)*VERT_EPS}|${Math.round(y/ VERT_EPS)*VERT_EPS}`;
+    function edgeKey(a,b){ return a<b ? `${a}|${b}` : `${b}|${a}`; }
 
-    // Some demo pillars
-    for (let i=0;i<15;i++){
-      const gx = Math.floor((Math.random()-0.5)*20);
-      const gz = Math.floor((Math.random()-0.5)*20);
-      const h = 1 + Math.floor(Math.random()*4);
-      for (let y=0;y<h;y++) addBlock(gx, y, gz, 2);
-    }
+    function buildBoard(){
+      // compute R so whole radius-2 board fits vertically on phone
+      const pad = 16; // css px
+      center = { x: canvas.clientWidth/2, y: canvas.clientHeight/2 };
 
-    // Raycaster
-    const raycaster = new THREE.Raycaster();
-    function getTargetBlock(addInstead){
-      // Raycast from camera center
-      raycaster.setFromCamera({x:0, y:0}, camera);
-      const intersects = raycaster.intersectObjects([...blocks.values()], false);
-      if (intersects.length){
-        const hit = intersects[0];
-        const p = hit.point.clone().add(hit.face.normal.clone().multiplyScalar(addInstead? 0.5 : -0.5));
-        return { x: Math.floor(p.x), y: Math.floor(p.y), z: Math.floor(p.z) };
-      } else if (addInstead){
-        const groundHits = raycaster.intersectObjects([ground]);
-        if (groundHits.length){
-          const gp = groundHits[0].point;
-          return { x: Math.floor(gp.x), y: 0, z: Math.floor(gp.z) };
+      // First compute unit layout spans (R=1)
+      const tmpCenters = [];
+      for (let q=-BOARD_R;q<=BOARD_R;q++){
+        for (let r=-BOARD_R;r<=BOARD_R;r++){
+          if (hexDistance(q,r) <= BOARD_R){
+            const x = (Math.sqrt(3) * q + Math.sqrt(3)/2 * r);
+            const y = (3/2 * r);
+            tmpCenters.push({x,y});
+          }
         }
       }
-      return null;
-    }
-
-    // --- UI buttons
-    const placeBtn = document.getElementById('placeBtn');
-    const removeBtn = document.getElementById('removeBtn');
-    const upBtn = document.getElementById('upBtn');
-    const downBtn = document.getElementById('downBtn');
-
-    placeBtn.addEventListener('click', ()=>{ const t = getTargetBlock(true); if (t) addBlock(t.x, t.y, t.z, activeMat); });
-    removeBtn.addEventListener('click', ()=>{ const t = getTargetBlock(false); if (t) removeBlock(t.x, t.y, t.z); });
-    upBtn.addEventListener('click', ()=>{ camera.position.y += 0.8; });
-    downBtn.addEventListener('click', ()=>{ camera.position.y -= 0.8; });
-
-    // --- Look (right zone): drag to rotate
-    const lookZone = document.getElementById('lookZone');
-    let lookTouchId = null, lastLX = 0, lastLY = 0;
-    function onLookStart(e){
-      e.preventDefault();
-      const t = (e.changedTouches || [e])[0];
-      if (lookTouchId === null){ lookTouchId = t.identifier ?? 'mouse'; lastLX = t.clientX; lastLY = t.clientY; }
-    }
-    function onLookMove(e){
-      if (lookTouchId === null) return;
-      const touches = e.changedTouches || [e];
-      for (const t of touches){
-        if ((t.identifier ?? 'mouse') === lookTouchId){
-          const dx = t.clientX - lastLX, dy = t.clientY - lastLY; lastLX = t.clientX; lastLY = t.clientY;
-          const sensitivity = 0.003;
-          camera.rotation.y -= dx * sensitivity;
-          camera.rotation.x -= dy * sensitivity;
-          camera.rotation.x = Math.max(-Math.PI/2 + 0.001, Math.min(Math.PI/2 - 0.001, camera.rotation.x));
-        }
+      let minX=1e9,maxX=-1e9,minY=1e9,maxY=-1e9;
+      const unitR = 1;
+      const tipX = unitR; const tipY = unitR; // we will add polygon tips later
+      for (const c of tmpCenters){
+        minX = Math.min(minX, c.x); maxX = Math.max(maxX, c.x);
+        minY = Math.min(minY, c.y); maxY = Math.max(maxY, c.y);
       }
-    }
-    function onLookEnd(e){
-      const touches = e.changedTouches || [e];
-      for (const t of touches){ if ((t.identifier ?? 'mouse') === lookTouchId) lookTouchId = null; }
-    }
-    lookZone.addEventListener('touchstart', onLookStart, {passive:false});
-    lookZone.addEventListener('touchmove', onLookMove, {passive:false});
-    lookZone.addEventListener('touchend', onLookEnd, {passive:false});
-    lookZone.addEventListener('mousedown', onLookStart);
-    window.addEventListener('mousemove', onLookMove);
-    window.addEventListener('mouseup', onLookEnd);
+      // include polygon extents: pointy top extends by R in x and y (approx)
+      const spanX = (maxX - minX) + 2*unitR;
+      const spanY = (maxY - minY) + 2*unitR;
+      const availX = Math.max(200, canvas.clientWidth - 2*pad);
+      const availY = Math.max(300, canvas.clientHeight - 2*pad);
+      const scale = 0.95 * Math.min(availX/spanX/Math.sqrt(3), availY/spanY/1.5);
+      R = Math.max(22, scale); // clamp minimum for touchability
 
-    // --- Movement (left zone joystick)
-    const moveZone = document.getElementById('moveZone');
-    const joystick = document.getElementById('joystick');
-    const stick = document.getElementById('stick');
-    let moveTouchId = null, originX=0, originY=0, mvX=0, mvY=0;
-    function setStick(dx, dy){
-      const maxR = 44; // px from center
-      const len = Math.hypot(dx, dy);
-      const k = len > maxR ? maxR/len : 1;
-      const x = dx * k, y = dy * k;
-      stick.style.transform = `translate(${32 + x}px, ${32 + y}px)`;
-      mvX = x/maxR; mvY = y/maxR; // normalized -1..1
-    }
-    function resetStick(){
-      stick.style.transform = 'translate(32px, 32px)';
-      mvX = 0; mvY = 0;
-    }
-    function onMoveStart(e){
-      e.preventDefault();
-      const t = (e.changedTouches || [e])[0];
-      if (moveTouchId === null){
-        moveTouchId = t.identifier ?? 'mouse';
-        const rect = joystick.getBoundingClientRect();
-        originX = rect.left + rect.width/2;
-        originY = rect.top + rect.height/2;
-        const dx = t.clientX - originX, dy = t.clientY - originY;
-        setStick(dx, dy);
+      // rebuild structures
+      hexes = []; vertices = []; edges = []; hexVerts = [];
+      const vmap = new Map();
+      const emap = new Map();
+
+      function addVertex(x,y){
+        const k = vKey(x,y);
+        if (vmap.has(k)) return vmap.get(k);
+        const id = vertices.length; vmap.set(k, id);
+        vertices.push({ x, y, owner:P.NONE, edges:[] });
+        return id;
       }
-    }
-    function onMoveMove(e){
-      if (moveTouchId === null) return;
-      const touches = e.changedTouches || [e];
-      for (const t of touches){
-        if ((t.identifier ?? 'mouse') === moveTouchId){
-          const dx = t.clientX - originX, dy = t.clientY - originY;
-          setStick(dx, dy);
+      function addEdge(a,b){
+        const k = edgeKey(a,b);
+        if (emap.has(k)) return emap.get(k);
+        const id = edges.length; emap.set(k, id);
+        edges.push({ a, b, color:0 });
+        vertices[a].edges.push(id); vertices[b].edges.push(id);
+        return id;
+      }
+
+      for (let q=-BOARD_R;q<=BOARD_R;q++){
+        for (let r=-BOARD_R;r<=BOARD_R;r++){
+          if (hexDistance(q,r) <= BOARD_R){
+            const {x,y} = axialToPixel(q,r);
+            const poly = hexPoints(x,y);
+            const col = COLOR_SET[Math.floor(Math.random()*COLOR_SET.length)];
+            const vids = poly.map(p => addVertex(p.x,p.y));
+            for (let i=0;i<6;i++) addEdge(vids[i], vids[(i+1)%6]);
+            hexes.push({ q,r, poly:vids, col });
+            hexVerts.push(vids);
+          }
         }
       }
     }
-    function onMoveEnd(e){
-      const touches = e.changedTouches || [e];
-      for (const t of touches){
-        if ((t.identifier ?? 'mouse') === moveTouchId){
-          moveTouchId = null; resetStick();
-        }
+
+    // --- Game state & HUD
+    let turn = P.BLACK; // black starts
+    const $turn = document.getElementById('turn');
+    const $turnDot = document.getElementById('turnDot');
+    const $reset = document.getElementById('reset');
+    const $bE = document.getElementById('bEdges');
+    const $wE = document.getElementById('wEdges');
+    const $gE = document.getElementById('gEdges');
+
+    function updateHUD(){
+      $turn.querySelector('span').textContent = turn===P.BLACK? 'Player 1 (Black)' : 'Player 2 (White)';
+      $turnDot.style.background = turn===P.BLACK? PLAYER_COLOR[P.BLACK] : PLAYER_COLOR[P.WHITE];
+      let b=0,w=0,g=0; for(const e of edges){ if(e.color===1) b++; else if(e.color===2) w++; else if(e.color===3) g++; }
+      $bE.textContent = b; $wE.textContent = w; $gE.textContent = g;
+    }
+    function nextTurn(){ turn = (turn===P.BLACK? P.WHITE : P.BLACK); updateHUD(); draw(); }
+    function reset(){ for (const v of vertices) v.owner = P.NONE; for (const e of edges) e.color = 0; turn = P.BLACK; updateHUD(); draw(); }
+    $reset.addEventListener('click', reset, {passive:true});
+
+    // Edge color from owners
+    function edgeColorFromOwners(aOwner, bOwner){
+      if (aOwner===P.NONE && bOwner===P.NONE) return 0;
+      if (aOwner!==P.NONE && bOwner!==P.NONE && aOwner!==bOwner) return 3; // grey
+      const c = (aOwner!==P.NONE? aOwner : bOwner);
+      return c===P.BLACK? 1 : 2; // black or white
+    }
+
+    // Input helpers (touch-first)
+    function getXY(e){
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
+      if (e.touches && e.touches[0]){
+        return { x:(e.touches[0].clientX-rect.left)*scaleX, y:(e.touches[0].clientY-rect.top)*scaleY };
+      } else {
+        return { x:(e.clientX-rect.left)*scaleX, y:(e.clientY-rect.top)*scaleY };
       }
     }
-    moveZone.addEventListener('touchstart', onMoveStart, {passive:false});
-    moveZone.addEventListener('touchmove', onMoveMove, {passive:false});
-    moveZone.addEventListener('touchend', onMoveEnd, {passive:false});
-    moveZone.addEventListener('mousedown', onMoveStart);
-    window.addEventListener('mousemove', onMoveMove);
-    window.addEventListener('mouseup', onMoveEnd);
 
-    // Prevent iOS rubber-band on drag
-    document.addEventListener('gesturestart', e=>e.preventDefault());
-
-    // Render loop
-    let last = performance.now();
-    function loop(now){
-      const dt = Math.min(0.033, (now - last)/1000); last = now;
-
-      // Move camera using joystick vector (mvX: -1..1 left-right, mvY: -1..1 up-down)
-      const speed = 6 * dt;
-      // forward/back from mvY (negative is up on screen, so invert)
-      const forward = new THREE.Vector3(0,0,-1).applyEuler(camera.rotation);
-      const right = new THREE.Vector3(1,0,0).applyEuler(camera.rotation);
-      camera.position.addScaledVector(forward, -mvY * speed);
-      camera.position.addScaledVector(right,   mvX * speed);
-
-      renderer.render(scene, camera);
-      requestAnimationFrame(loop);
+    function nearestVertex(px,py){
+      let best=-1, bd=1e9; const TH = Math.max(16, 0.45*R); // scale with hex size
+      for(let i=0;i<vertices.length;i++){
+        const v=vertices[i]; const d = Math.hypot(px-v.x, py-v.y);
+        if (d<bd){ bd=d; best=i; }
+      }
+      return bd<=TH? best : -1;
     }
-    requestAnimationFrame(loop);
+
+    function placeAt(px,py){
+      const vid = nearestVertex(px,py); if (vid<0) return;
+      const v = vertices[vid]; if (v.owner!==P.NONE) return; // already taken
+      v.owner = turn;
+      for (const eid of v.edges){
+        const e = edges[eid]; const other = (e.a===vid? e.b : e.a);
+        e.color = edgeColorFromOwners(vertices[vid].owner, vertices[other].owner);
+      }
+      updateHUD();
+      nextTurn();
+    }
+
+    canvas.addEventListener('touchstart', (e)=>{ e.preventDefault(); const p=getXY(e); placeAt(p.x,p.y); }, {passive:false});
+    canvas.addEventListener('click', (e)=>{ const p=getXY(e); placeAt(p.x,p.y); });
+
+    // Rendering
+    function draw(){
+      ctx.clearRect(0,0,canvas.clientWidth,canvas.clientHeight);
+      // subtle bg grid
+      const g=28; ctx.beginPath();
+      for(let x=0;x<canvas.clientWidth;x+=g){ctx.moveTo(x,0);ctx.lineTo(x,canvas.clientHeight);} 
+      for(let y=0;y<canvas.clientHeight;y+=g){ctx.moveTo(0,y);ctx.lineTo(canvas.clientWidth,y);} 
+      ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.stroke();
+
+      // hexes
+      for (let i=0;i<hexes.length;i++){
+        const vids = hexVerts[i]; const col = hexes[i].col;
+        ctx.beginPath();
+        ctx.moveTo(vertices[vids[0]].x, vertices[vids[0]].y);
+        for(let k=1;k<6;k++) ctx.lineTo(vertices[vids[k]].x, vertices[vids[k]].y);
+        ctx.closePath();
+        ctx.fillStyle = col.fill; ctx.fill();
+        ctx.lineWidth = 2.2; ctx.strokeStyle = col.stroke; ctx.stroke();
+      }
+
+      // edges
+      ctx.lineCap = 'round';
+      for (const e of edges){
+        const a = vertices[e.a], b = vertices[e.b];
+        ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+        if (e.color===1)      ctx.strokeStyle = PLAYER_COLOR[P.BLACK];
+        else if (e.color===2) ctx.strokeStyle = PLAYER_COLOR[P.WHITE];
+        else if (e.color===3) ctx.strokeStyle = EDGE_GREY;
+        else { ctx.strokeStyle = 'rgba(255,255,255,0.12)'; }
+        ctx.lineWidth = e.color? 6 : 2.5;
+        ctx.stroke();
+      }
+
+      // markers
+      for (const v of vertices){
+        if (v.owner===P.NONE) continue;
+        ctx.beginPath(); ctx.arc(v.x, v.y, Math.max(6, 0.17*R), 0, Math.PI*2);
+        ctx.fillStyle = v.owner===P.BLACK? PLAYER_COLOR[P.BLACK] : PLAYER_COLOR[P.WHITE];
+        ctx.fill();
+        ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.stroke();
+      }
+    }
+
+    function relayout(){
+      fitCanvas();
+      buildBoard();
+      updateHUD();
+      draw();
+    }
+
+    // init & resize
+    window.addEventListener('resize', relayout);
+    relayout();
   </script>
 </body>
 </html>
