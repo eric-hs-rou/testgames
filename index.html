@@ -2,48 +2,58 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mini Voxel Sandbox – Vibe Coding</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Mini Voxel Sandbox – Mobile</title>
+  <meta name="theme-color" content="#0b0f14" />
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <style>
-    html, body { margin:0; height:100%; background:#0b0f14; color:#e6f1ff; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+    :root { --bg:#0b0f14; --panel:rgba(13,18,26,.7); --border:#1f2a37; --text:#e6f1ff; }
+    html, body { margin:0; height:100%; background:var(--bg); color:var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; overscroll-behavior: none; }
+    canvas { display:block; touch-action:none; }
     #ui { position: fixed; top: 10px; left: 10px; z-index: 10; }
-    #ui .card { background: rgba(13,18,26,.7); border:1px solid #1f2a37; padding:10px 12px; border-radius:12px; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
-    #ui .title { font-weight:800; font-size:16px; margin-bottom:6px; }
-    #ui .help { font-size:12px; opacity:.85; line-height:1.5; }
-    #hotbar { position: fixed; left: 50%; transform: translateX(-50%); bottom: 16px; display: flex; gap: 8px; z-index: 10; }
-    .slot { width: 44px; height: 44px; border-radius: 10px; border: 1px solid #1f2a37; background: rgba(13,18,26,.7); display:grid; place-items:center; box-shadow: 0 8px 20px rgba(0,0,0,.35); font-weight:700; }
+    .card { background: var(--panel); border:1px solid var(--border); padding:10px 12px; border-radius:12px; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+    .title { font-weight:800; font-size:16px; margin-bottom:6px; }
+    .help { font-size:12px; opacity:.85; line-height:1.5; }
+    #hotbar { position: fixed; left: 50%; transform: translateX(-50%); bottom: 18px; display: flex; gap: 8px; z-index: 12; }
+    .slot { width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--border); background: var(--panel); display:grid; place-items:center; box-shadow: 0 8px 20px rgba(0,0,0,.35); font-weight:700; }
     .slot.active { outline: 2px solid #7dd3fc; }
-    canvas { display:block; }
-    #reticle { position: fixed; left:50%; top:50%; transform: translate(-50%, -50%); width: 14px; height:14px; border:2px solid rgba(255,255,255,.75); border-radius:50%; z-index:10; pointer-events:none; }
-    #overlay { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; color:#e6f1ff; background: radial-gradient(1200px 600px at 50% 50%, rgba(12,18,26,.6), rgba(12,18,26,.9)); z-index:20; }
-    #overlay.hide { display:none; }
-    .btn { border:none; padding:10px 14px; border-radius: 12px; font-weight:700; background:#1d2836; color:#e6f1ff; margin-top:10px; }
+    #actions { position: fixed; right: 14px; bottom: 18px; display:flex; flex-direction:column; gap:10px; z-index:12; }
+    .btn { border:none; padding:12px 14px; border-radius: 12px; font-weight:700; background:#1d2836; color:var(--text); }
+    #moveZone { position: fixed; left: 0; bottom: 0; width: 50vw; height: 55vh; z-index: 11; touch-action:none; }
+    #lookZone { position: fixed; right: 0; bottom: 0; width: 50vw; height: 100vh; z-index: 11; touch-action:none; }
+    #joystick { position:absolute; width: 120px; height: 120px; border-radius: 60px; border:1px solid var(--border); background: rgba(255,255,255,.04); left: 16px; bottom: 16px; z-index: 12; }
+    #stick { position:absolute; width: 56px; height:56px; border-radius: 28px; background: rgba(125,211,252,.3); border:1px solid rgba(125,211,252,.6); left: 16px; bottom: 16px; transform: translate(32px, 32px); }
   </style>
 </head>
 <body>
   <div id="ui">
     <div class="card">
-      <div class="title">Mini Voxel Sandbox</div>
-      <div class="help">
-        Click to lock mouse • WASD move • SPACE up • SHIFT down • Mouse to look<br/>
-        Left-click: remove block • Right-click: place block • Keys 1–5 select block type
-      </div>
+      <div class="title">Voxel – Mobile</div>
+      <div class="help">Left area: drag joystick to move • Right area: drag to look • Place/Remove buttons on the right • Up/Down for height</div>
     </div>
   </div>
   <div id="hotbar"></div>
-  <div id="reticle"></div>
-  <div id="overlay">
-    <div class="card" style="text-align:center">
-      <div class="title" style="font-size:24px">Click to Start</div>
-      <div class="help">This is a tiny Minecraft‑like sandbox. Place/remove cubes. No‑clip movement for now.</div>
-      <button id="startBtn" class="btn">Enter World</button>
-    </div>
+  <div id="actions">
+    <button id="placeBtn" class="btn">Place</button>
+    <button id="removeBtn" class="btn">Remove</button>
+    <button id="upBtn" class="btn">Up</button>
+    <button id="downBtn" class="btn">Down</button>
   </div>
+  <div id="moveZone"></div>
+  <div id="lookZone"></div>
+  <div id="joystick"><div id="stick"></div></div>
+
+  <script type="module">
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+      addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(console.error));
+    }
+  </script>
 
   <script type="module">
     import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 
-    // ---------- Basic scene
     const renderer = new THREE.WebGLRenderer({ antialias:true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
@@ -55,64 +65,22 @@
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
     camera.position.set(8, 6, 8);
 
-    // Lights
     const hemi = new THREE.HemisphereLight(0xffffff, 0x334466, 0.65);
     scene.add(hemi);
     const dir = new THREE.DirectionalLight(0xffffff, 0.8);
     dir.position.set(6, 10, 3);
     scene.add(dir);
 
-    // ---------- Pointer lock + movement (simple no‑clip)
-    const vel = new THREE.Vector3();
     const dirVec = new THREE.Vector3();
-    const keys = new Set();
-    let pointerLocked = false;
-
-    const overlay = document.getElementById('overlay');
-    const startBtn = document.getElementById('startBtn');
-
-    function lockPointer(){
-      renderer.domElement.requestPointerLock();
-    }
-
-    document.addEventListener('pointerlockchange', () => {
-      pointerLocked = document.pointerLockElement === renderer.domElement;
-      overlay.classList.toggle('hide', pointerLocked);
-    });
-
-    startBtn.addEventListener('click', lockPointer);
-    renderer.domElement.addEventListener('click', () => { if (!pointerLocked) lockPointer(); });
-
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-
-    addEventListener('keydown', (e)=>{
-      if (e.repeat) return; keys.add(e.code);
-      if (e.code === 'Digit1' || e.code==='Digit2' || e.code==='Digit3' || e.code==='Digit4' || e.code==='Digit5') selectSlot(parseInt(e.code.slice(-1))-1);
-    });
-    addEventListener('keyup',   (e)=>{ keys.delete(e.code); });
-
-    // Mouse look
-    addEventListener('mousemove', (e)=>{
-      if (!pointerLocked) return;
-      const sensitivity = 0.0025;
-      camera.rotation.y -= e.movementX * sensitivity;
-      camera.rotation.x -= e.movementY * sensitivity;
-      camera.rotation.x = Math.max(-Math.PI/2 + 0.001, Math.min(Math.PI/2 - 0.001, camera.rotation.x));
-    });
-
-    // ---------- World & blocks
-    const BLOCK = 1.0; // unit size
-    const blocks = new Map(); // key "x,y,z" -> Mesh
+    const rightVec = new THREE.Vector3(1,0,0);
+    const blocks = new Map();
 
     const materials = [
-      new THREE.MeshStandardMaterial({ color: 0x6bbf59 }), // grass
-      new THREE.MeshStandardMaterial({ color: 0x8b5a2b }), // dirt
-      new THREE.MeshStandardMaterial({ color: 0x888888 }), // stone
-      new THREE.MeshStandardMaterial({ color: 0xc8a26a }), // wood
-      new THREE.MeshStandardMaterial({ color: 0xb64646 }), // brick
+      new THREE.MeshStandardMaterial({ color: 0x6bbf59 }),
+      new THREE.MeshStandardMaterial({ color: 0x8b5a2b }),
+      new THREE.MeshStandardMaterial({ color: 0x888888 }),
+      new THREE.MeshStandardMaterial({ color: 0xc8a26a }),
+      new THREE.MeshStandardMaterial({ color: 0xb64646 }),
     ];
     let activeMat = 0;
 
@@ -122,34 +90,30 @@
       const el = document.createElement('div');
       el.className = 'slot'+(i===0?' active':'');
       el.textContent = (i+1);
+      el.addEventListener('click', ()=> selectSlot(i));
       hotbar.appendChild(el); slots.push(el);
     }
     function selectSlot(i){ activeMat = i; slots.forEach((s,idx)=> s.classList.toggle('active', idx===i)); }
 
-    const cubeGeo = new THREE.BoxGeometry(BLOCK, BLOCK, BLOCK);
-
+    const cubeGeo = new THREE.BoxGeometry(1,1,1);
     function key(x,y,z){ return `${x}|${y}|${z}`; }
     function addBlock(x,y,z, matIndex=activeMat){
       const k = key(x,y,z); if (blocks.has(k)) return;
       const mesh = new THREE.Mesh(cubeGeo, materials[matIndex]);
-      mesh.position.set(x+0.5, y+0.5, z+0.5); // center
-      mesh.castShadow = true; mesh.receiveShadow = true;
+      mesh.position.set(x+0.5, y+0.5, z+0.5);
       scene.add(mesh); blocks.set(k, mesh);
     }
     function removeBlock(x,y,z){
       const k = key(x,y,z); const m = blocks.get(k); if(!m) return; scene.remove(m); m.geometry.dispose(); blocks.delete(k);
     }
 
-    // Ground plane (for performance, not voxel ground)
-    {
-      const groundGeo = new THREE.PlaneGeometry(200, 200);
-      const groundMat = new THREE.MeshStandardMaterial({ color: 0x2a3b2f });
-      const ground = new THREE.Mesh(groundGeo, groundMat);
-      ground.rotation.x = -Math.PI/2; ground.position.y = 0;
-      ground.receiveShadow = true; scene.add(ground);
-    }
+    // Ground
+    const groundGeo = new THREE.PlaneGeometry(200, 200);
+    const groundMat = new THREE.MeshStandardMaterial({ color: 0x2a3b2f });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI/2; ground.position.y = 0; scene.add(ground);
 
-    // Sprinkle some demo pillars to mine
+    // Some demo pillars
     for (let i=0;i<15;i++){
       const gx = Math.floor((Math.random()-0.5)*20);
       const gz = Math.floor((Math.random()-0.5)*20);
@@ -157,22 +121,19 @@
       for (let y=0;y<h;y++) addBlock(gx, y, gz, 2);
     }
 
-    // Raycast helpers
+    // Raycaster
     const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
     function getTargetBlock(addInstead){
-      // Cast from camera center
+      // Raycast from camera center
       raycaster.setFromCamera({x:0, y:0}, camera);
       const intersects = raycaster.intersectObjects([...blocks.values()], false);
       if (intersects.length){
         const hit = intersects[0];
         const p = hit.point.clone().add(hit.face.normal.clone().multiplyScalar(addInstead? 0.5 : -0.5));
-        const bx = Math.floor(p.x), by = Math.floor(p.y), bz = Math.floor(p.z);
-        return { x: bx, y: by, z: bz };
-      } else {
-        // If no block hit, try ground to place on top
-        const groundHits = raycaster.intersectObjects(scene.children.filter(o=>o.geometry instanceof THREE.PlaneGeometry));
-        if (groundHits.length && addInstead){
+        return { x: Math.floor(p.x), y: Math.floor(p.y), z: Math.floor(p.z) };
+      } else if (addInstead){
+        const groundHits = raycaster.intersectObjects([ground]);
+        if (groundHits.length){
           const gp = groundHits[0].point;
           return { x: Math.floor(gp.x), y: 0, z: Math.floor(gp.z) };
         }
@@ -180,37 +141,118 @@
       return null;
     }
 
-    // Place / Remove
-    addEventListener('mousedown', (e)=>{
-      if (!pointerLocked) return;
-      if (e.button === 0){ // left: remove
-        const t = getTargetBlock(false); if (t) removeBlock(t.x, t.y, t.z);
-      } else if (e.button === 2){ // right: place
-        const t = getTargetBlock(true); if (t) addBlock(t.x, t.y, t.z, activeMat);
-      }
-    });
-    // prevent context menu
-    addEventListener('contextmenu', (e)=>{ e.preventDefault(); });
+    // --- UI buttons
+    const placeBtn = document.getElementById('placeBtn');
+    const removeBtn = document.getElementById('removeBtn');
+    const upBtn = document.getElementById('upBtn');
+    const downBtn = document.getElementById('downBtn');
 
-    // ---------- Main loop
+    placeBtn.addEventListener('click', ()=>{ const t = getTargetBlock(true); if (t) addBlock(t.x, t.y, t.z, activeMat); });
+    removeBtn.addEventListener('click', ()=>{ const t = getTargetBlock(false); if (t) removeBlock(t.x, t.y, t.z); });
+    upBtn.addEventListener('click', ()=>{ camera.position.y += 0.8; });
+    downBtn.addEventListener('click', ()=>{ camera.position.y -= 0.8; });
+
+    // --- Look (right zone): drag to rotate
+    const lookZone = document.getElementById('lookZone');
+    let lookTouchId = null, lastLX = 0, lastLY = 0;
+    function onLookStart(e){
+      e.preventDefault();
+      const t = (e.changedTouches || [e])[0];
+      if (lookTouchId === null){ lookTouchId = t.identifier ?? 'mouse'; lastLX = t.clientX; lastLY = t.clientY; }
+    }
+    function onLookMove(e){
+      if (lookTouchId === null) return;
+      const touches = e.changedTouches || [e];
+      for (const t of touches){
+        if ((t.identifier ?? 'mouse') === lookTouchId){
+          const dx = t.clientX - lastLX, dy = t.clientY - lastLY; lastLX = t.clientX; lastLY = t.clientY;
+          const sensitivity = 0.003;
+          camera.rotation.y -= dx * sensitivity;
+          camera.rotation.x -= dy * sensitivity;
+          camera.rotation.x = Math.max(-Math.PI/2 + 0.001, Math.min(Math.PI/2 - 0.001, camera.rotation.x));
+        }
+      }
+    }
+    function onLookEnd(e){
+      const touches = e.changedTouches || [e];
+      for (const t of touches){ if ((t.identifier ?? 'mouse') === lookTouchId) lookTouchId = null; }
+    }
+    lookZone.addEventListener('touchstart', onLookStart, {passive:false});
+    lookZone.addEventListener('touchmove', onLookMove, {passive:false});
+    lookZone.addEventListener('touchend', onLookEnd, {passive:false});
+    lookZone.addEventListener('mousedown', onLookStart);
+    window.addEventListener('mousemove', onLookMove);
+    window.addEventListener('mouseup', onLookEnd);
+
+    // --- Movement (left zone joystick)
+    const moveZone = document.getElementById('moveZone');
+    const joystick = document.getElementById('joystick');
+    const stick = document.getElementById('stick');
+    let moveTouchId = null, originX=0, originY=0, mvX=0, mvY=0;
+    function setStick(dx, dy){
+      const maxR = 44; // px from center
+      const len = Math.hypot(dx, dy);
+      const k = len > maxR ? maxR/len : 1;
+      const x = dx * k, y = dy * k;
+      stick.style.transform = `translate(${32 + x}px, ${32 + y}px)`;
+      mvX = x/maxR; mvY = y/maxR; // normalized -1..1
+    }
+    function resetStick(){
+      stick.style.transform = 'translate(32px, 32px)';
+      mvX = 0; mvY = 0;
+    }
+    function onMoveStart(e){
+      e.preventDefault();
+      const t = (e.changedTouches || [e])[0];
+      if (moveTouchId === null){
+        moveTouchId = t.identifier ?? 'mouse';
+        const rect = joystick.getBoundingClientRect();
+        originX = rect.left + rect.width/2;
+        originY = rect.top + rect.height/2;
+        const dx = t.clientX - originX, dy = t.clientY - originY;
+        setStick(dx, dy);
+      }
+    }
+    function onMoveMove(e){
+      if (moveTouchId === null) return;
+      const touches = e.changedTouches || [e];
+      for (const t of touches){
+        if ((t.identifier ?? 'mouse') === moveTouchId){
+          const dx = t.clientX - originX, dy = t.clientY - originY;
+          setStick(dx, dy);
+        }
+      }
+    }
+    function onMoveEnd(e){
+      const touches = e.changedTouches || [e];
+      for (const t of touches){
+        if ((t.identifier ?? 'mouse') === moveTouchId){
+          moveTouchId = null; resetStick();
+        }
+      }
+    }
+    moveZone.addEventListener('touchstart', onMoveStart, {passive:false});
+    moveZone.addEventListener('touchmove', onMoveMove, {passive:false});
+    moveZone.addEventListener('touchend', onMoveEnd, {passive:false});
+    moveZone.addEventListener('mousedown', onMoveStart);
+    window.addEventListener('mousemove', onMoveMove);
+    window.addEventListener('mouseup', onMoveEnd);
+
+    // Prevent iOS rubber-band on drag
+    document.addEventListener('gesturestart', e=>e.preventDefault());
+
+    // Render loop
     let last = performance.now();
     function loop(now){
       const dt = Math.min(0.033, (now - last)/1000); last = now;
 
-      // Movement
-      if (pointerLocked){
-        const speed = (keys.has('ShiftLeft')? 10 : 5) * dt * 3.0; // faster with shift
-        dirVec.set(0,0,-1).applyEuler(camera.rotation);
-        const right = new THREE.Vector3(1,0,0).applyEuler(camera.rotation);
-
-        if (keys.has('KeyW')) camera.position.addScaledVector(dirVec, speed);
-        if (keys.has('KeyS')) camera.position.addScaledVector(dirVec, -speed);
-        if (keys.has('KeyA')) camera.position.addScaledVector(right, -speed);
-        if (keys.has('KeyD')) camera.position.addScaledVector(right, speed);
-        if (keys.has('Space')) camera.position.y += speed;
-        if (keys.has('ShiftLeft')) {/* held for speed only */}
-        if (keys.has('ControlLeft')) camera.position.y -= speed;
-      }
+      // Move camera using joystick vector (mvX: -1..1 left-right, mvY: -1..1 up-down)
+      const speed = 6 * dt;
+      // forward/back from mvY (negative is up on screen, so invert)
+      const forward = new THREE.Vector3(0,0,-1).applyEuler(camera.rotation);
+      const right = new THREE.Vector3(1,0,0).applyEuler(camera.rotation);
+      camera.position.addScaledVector(forward, -mvY * speed);
+      camera.position.addScaledVector(right,   mvX * speed);
 
       renderer.render(scene, camera);
       requestAnimationFrame(loop);
